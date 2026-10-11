@@ -87,16 +87,14 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     egui::Panel::left("toolbar").resizable(false).exact_size(w).frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(m, 8))).show(
         ui,
         |ui| {
-            if t.pro {
-                // Photoshop's toolbar header chevrons switch between one and two columns.
-                let (cr, resp) = ui.allocate_exact_size(vec2(bx, 14.0), Sense::click());
-                icons::paint(ui, cr, if double { "chevrons-left" } else { "chevrons-right" }, 11.0, if resp.hovered() { t.text } else { t.text_faint });
-                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tl!("Toolbar")));
-                if resp.clicked() {
-                    app.ui.panels.toolbar_double = !app.ui.panels.toolbar_double;
-                }
-                ui.add_space(4.0);
+            // Photoshop's toolbar header chevrons switch between one and two columns in every theme.
+            let (cr, resp) = ui.allocate_exact_size(vec2(bx, 14.0), Sense::click());
+            icons::paint(ui, cr, if double { "chevrons-left" } else { "chevrons-right" }, 11.0, if resp.hovered() { t.text } else { t.text_faint });
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tl!("Toolbar")));
+            if resp.clicked() {
+                app.ui.panels.toolbar_double = !app.ui.panels.toolbar_double;
             }
+            ui.add_space(4.0);
             // Subtle violet wash at the bottom of the toolbar.
             let full = ui.max_rect();
             if !t.bevel && !t.pro && t.dark() {
@@ -4406,7 +4404,9 @@ mod toolbar_tests {
         );
         PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
         h.run_steps(2);
-        let left = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.ctx.data(|d| d.get_temp::<f32>(egui::Id::new("toolbar-test-left"))).unwrap_or(0.0);
+        let left = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+            h.ctx.data(|d| d.get_temp::<f32>(egui::Id::new("toolbar-test-left"))).unwrap_or(0.0)
+        };
         let single = left(&h);
         assert!(!h.state().ui.panels.toolbar_double);
 
@@ -4450,6 +4450,8 @@ mod toolbar_tests {
             |ui, app: &mut PhotocraftApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     toolbar(app, ui);
+                    let left = ui.available_rect_before_wrap().left();
+                    ui.data_mut(|d| d.insert_temp(egui::Id::new("toolbar-test-left"), left));
                 }
             },
             app,
@@ -4457,6 +4459,26 @@ mod toolbar_tests {
         PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
         h.run_steps(2);
         h
+    }
+
+    /// The Studio toolbar exposes the same one/two-column toggle as Pro.
+    #[test]
+    fn studio_header_chevron_toggles_two_columns() {
+        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut h = toolbar_harness(app);
+        let left = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.ctx.data(|d| d.get_temp::<f32>(egui::Id::new("toolbar-test-left"))).unwrap_or(0.0);
+        let single = left(&h);
+        assert!(!h.state().ui.panels.toolbar_double);
+
+        h.get_by_label("Toolbar").click();
+        h.run_steps(2);
+        assert!(h.state().ui.panels.toolbar_double);
+        assert!(left(&h) > single + 30.0, "the Studio toolbar did not widen: {single} -> {}", left(&h));
+
+        h.get_by_label("Toolbar").click();
+        h.run_steps(2);
+        assert!(!h.state().ui.panels.toolbar_double);
+        assert_eq!(left(&h), single);
     }
 
     /// Double-clicking the Hand tool fits the image on screen (Photoshop); a single click only
