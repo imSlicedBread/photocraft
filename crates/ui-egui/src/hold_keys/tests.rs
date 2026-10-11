@@ -201,6 +201,34 @@ fn temporary_zoom_in_and_out_restore_the_tool() {
 }
 
 #[test]
+fn tilde_temporarily_erases_while_brush_is_selected() {
+    let mut h = harness(Tool::Brush);
+    let id = with_layer(&mut h);
+    assert_eq!(rgba(&h, 130, 130)[3], 1.0);
+
+    key(&mut h, Key::Backtick, true, Modifiers::SHIFT);
+    assert_eq!(held_tool(h.state(), &h.ctx), Some(Temporary::Eraser));
+    press_at(&mut h, 130.0, 130.0);
+    release(&mut h, 138.0, 136.0, Modifiers::SHIFT);
+    key(&mut h, Key::Backtick, false, Modifiers::SHIFT);
+    hold_mods(&mut h, Modifiers::NONE);
+
+    assert_eq!(h.state().ui.tool, Tool::Brush, "the selected Brush is restored");
+    assert_eq!(held_tool(h.state(), &h.ctx), None);
+    assert!(rgba(&h, 130, 130)[3] < 1.0, "pixel={:?}", rgba(&h, 130, 130));
+    assert_eq!(h.state().session.active().unwrap().history.undo_label(), Some("Eraser"));
+    assert_eq!(
+        h.state().session.active().unwrap().doc.layer(id).unwrap().surface().unwrap().rgba(130, 130)[0],
+        1.0
+    );
+
+    // The binding is inert while another tool is selected.
+    h.state_mut().ui.tool = Tool::Pencil;
+    key(&mut h, Key::Backtick, true, Modifiers::SHIFT);
+    assert_eq!(held_tool(h.state(), &h.ctx), None);
+}
+
+#[test]
 fn temporary_zoom_drag_is_a_scrubby_zoom() {
     let mut h = harness(Tool::Brush);
     let z0 = h.state().ui.views[0].zoom;
@@ -390,6 +418,10 @@ fn keyboard_shortcuts_dialog_lists_the_keys_under_tools() {
     let temp = vec!["Tools".to_string(), "Temporary".to_string()];
     assert_eq!(find("tools.temporary.hand"), Some((temp.clone(), Some("Space".into()))));
     assert_eq!(find("tools.temporary.zoomOut"), Some((temp, Some("Alt+Space".into()))));
+    assert_eq!(
+        find("tools.temporary.eraser"),
+        Some((vec!["Tools".into(), "Temporary".into()], Some("~".into())))
+    );
     assert_eq!(crate::prefs_ui::default_shortcut("tools.temporary.zoomIn").as_deref(), Some("Cmd+Space"));
     // One contiguous Tools section (the dialog prints a header where the top level changes).
     let first = items.iter().position(|i| i.2.first().map(String::as_str) == Some("Tools")).unwrap();

@@ -4,6 +4,7 @@
 //! - ⌘Space (Ctrl+Space off the Mac): Zoom In while held; a drag is a scrubby zoom.
 //! - ⌥Space (Alt+Space off the Mac): Zoom Out while held. ⌥ added to a held Zoom In (⌘⌥Space)
 //!   zooms out too, as ⌥ does with the Zoom tool.
+//! - ~ with the Brush: the Eraser while held.
 //! - The keys can be pressed in any order. Photoshop users usually hold Space first: on the Mac
 //!   that keeps ⌘Space from opening Spotlight, and many Linux desktops take ⌥Space for the window
 //!   menu when ⌥ comes first.
@@ -36,6 +37,7 @@ pub enum Temporary {
     Hand,
     ZoomIn,
     ZoomOut,
+    Eraser,
     /// ⌘ held with a tool that [`cmd_moves`]: a modifier, not a rebindable key.
     Move,
 }
@@ -46,6 +48,7 @@ impl Temporary {
             Temporary::Hand => "tools.temporary.hand",
             Temporary::ZoomIn => "tools.temporary.zoomIn",
             Temporary::ZoomOut => "tools.temporary.zoomOut",
+            Temporary::Eraser => "tools.temporary.eraser",
             Temporary::Move => "tools.temporary.move",
         }
     }
@@ -54,12 +57,13 @@ impl Temporary {
         match self {
             Temporary::Hand => Tool::Hand,
             Temporary::ZoomIn | Temporary::ZoomOut => Tool::Zoom,
+            Temporary::Eraser => Tool::Eraser,
             Temporary::Move => Tool::Move,
         }
     }
 
     /// The key-bound temporary tools (`prefs::TEMPORARY_TOOLS`).
-    const BOUND: [Temporary; 3] = [Temporary::Hand, Temporary::ZoomIn, Temporary::ZoomOut];
+    const BOUND: [Temporary; 4] = [Temporary::Hand, Temporary::ZoomIn, Temporary::ZoomOut, Temporary::Eraser];
 }
 
 /// Tools on which holding ⌘ (Ctrl off the Mac) is the Move tool. Photoshop excepts the Hand,
@@ -153,6 +157,9 @@ pub fn held_tool(app: &PhotocraftApp, ctx: &egui::Context) -> Option<Temporary> 
     let mut alt = false;
     ctx.input(|i| {
         for t in Temporary::BOUND {
+            if t == Temporary::Eraser && app.ui.tool != Tool::Brush {
+                continue;
+            }
             if let Some(sc) = binding(app, t)
                 && held(i, &sc)
                 && best.is_none_or(|(n, ..)| count(&sc) > n)

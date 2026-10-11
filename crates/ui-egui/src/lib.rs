@@ -949,7 +949,8 @@ impl PhotocraftApp {
     /// Keep one view per document, in tab order: a view and its windows stay with their document
     /// when tabs move (`document.move`) or close.
     /// The tool pointer events go to: a held temporary tool when there is one (⌘ is the Move
-    /// tool, `hold_keys::cmd_moves`), else the selected tool.
+    /// tool, `hold_keys::cmd_moves`; tilde is the Eraser while Brush is selected), else the
+    /// selected tool.
     pub fn active_tool(&self) -> state::Tool {
         self.tool_override.unwrap_or(self.ui.tool)
     }

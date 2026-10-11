@@ -38,6 +38,7 @@ pub fn parse(s: &str) -> Option<KeyboardShortcut> {
         ";" => Some(Key::Semicolon),
         "'" => Some(Key::Quote),
         "]" => Some(Key::CloseBracket),
+        "~" => Some(Key::Backtick),
         name => Key::from_name(name),
     }?;
     Some(KeyboardShortcut::new(mods, key))
@@ -634,6 +635,7 @@ mod tests {
         assert_eq!(parse("Cmd+]").unwrap().logical_key, Key::CloseBracket);
         assert_eq!(parse("Cmd+=").unwrap().logical_key, Key::Equals);
         assert_eq!(parse("F7").unwrap().logical_key, Key::F7);
+        assert_eq!(parse("~").unwrap().logical_key, Key::Backtick);
         assert!(parse("Cmd+Nonsense").is_none());
     }
 
